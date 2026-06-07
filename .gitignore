@@ -1,0 +1,25 @@
+# Entornos virtuales (todos los nombres)
+venv*/
+.venv/
+env/
+**/venv*/
+**/site-packages/
+
+# Datos pesados
+*.csv
+*.gz
+*.bz2
+mrt_files/
+temp_mrt/
+
+# Imágenes generadas
+*.png
+*.jpg
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.egg-info/
