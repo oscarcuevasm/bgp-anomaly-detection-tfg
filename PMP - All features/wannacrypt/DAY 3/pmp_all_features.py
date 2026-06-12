@@ -1,3 +1,14 @@
+# ==============================================================================
+# Copyright (c) UNIVERSIDAD AUTÓNOMA DE MADRID
+# Francisco Tomás y Valiente, no 1
+# Madrid, 28049
+# Spain
+#
+# Óscar Cuevas Martínez
+# Evaluating the Performance of BGP Different Anomaly Detection Methods
+# All Rights Reserved
+# ==============================================================================
+
 import os
 import pandas as pd
 import matrixprofile as mp
@@ -5,12 +16,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.dates as mdates
 
-# --- 1. CONFIGURACIÓN ---
+# --- 1. CONFIGURATION ---
 FILE_BASELINE = "./Wannacrypt_RRC04_Raw/wannacrypt_anomaly_14may_features_1s.csv"
-OUTPUT_DIR = "./PMP_Resultados_Wannacrypt" # Carpeta donde se guardarán los PNGs
+OUTPUT_DIR = "./PMP_Resultados_Wannacrypt" # Directory where PNGs will be saved
 WINDOWS_TO_TEST = range(5, 305, 5)
 
-# Lista completa de características a analizar
+# Full list of BGP features to analyse
 COLUMNS_TO_ANALYZE = [
     "announcements", "withdrawals", "nlri_ann", "dups", "origin_0", 
     "origin_2", "origin_changes", "as_path_max", "unique_as_path_max", 
@@ -24,44 +35,44 @@ COLUMNS_TO_ANALYZE = [
 
 print(f"--- INICIANDO PMP MULTICOLUMNA: ANOMALÍA WANNACRYPT (14 MAYO 2017) ---")
 
-# Crear carpeta de salida si no existe
+# Create output directory if it does not exist
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 try:
-    print(f"Cargando dataset gigante: {FILE_BASELINE}...")
+    print(f"Loading large dataset: {FILE_BASELINE}...")
     df = pd.read_csv(FILE_BASELINE)
     df['window_start'] = pd.to_datetime(df['window_start'])
     df.set_index('window_start', inplace=True)
 except Exception as e:
-    print(f"ERROR al cargar el archivo: {e}")
+    print(f"ERROR loading file: {e}")
     exit()
 
-# --- 2. BUCLE PRINCIPAL POR CADA COLUMNA ---
+# --- 2. MAIN LOOP OVER EACH FEATURE COLUMN ---
 for idx_col, column_name in enumerate(COLUMNS_TO_ANALYZE, 1):
     print("\n" + "="*60)
     print(f"[{idx_col}/{len(COLUMNS_TO_ANALYZE)}] Analizando: {column_name}")
     print("="*60)
     
-    # 2.1 Preparar datos de la columna específica
+    # 2.1 Prepare data for the specific feature column
     if column_name not in df.columns:
-        print(f"  -> ADVERTENCIA: La columna {column_name} no existe en el CSV. Saltando...")
+        print(f"  -> WARNING: Column {column_name} not found in CSV. Skipping...")
         continue
         
     ts_data = df[column_name].resample('1S').sum().fillna(0)
     data_values = ts_data.values.astype(float)
     
-    # Si la columna está completamente vacía (puros ceros), no perdemos el tiempo calculando
+    # If the column contains only zeros, skip computation to save time
     if np.max(data_values) == 0:
-        print(f"  -> La columna {column_name} solo contiene ceros. Saltando cálculo para ahorrar tiempo...")
+        print(f"  -> Column {column_name} contains only zeros. Skipping computation to save time...")
         continue
 
-    # 2.2 Cálculo de Pan Matrix Profile
-    print(f"  -> Calculando Pan Matrix Profile (m de 5 a 300)...")
+    # 2.2 Pan Matrix Profile computation
+    print(f"  -> Computing Pan Matrix Profile (m from 5 to 300)...")
     pmp_matrix = []
     
     for idx, w in enumerate(WINDOWS_TO_TEST, 1):
         if idx % 20 == 0 or idx == 1:
-            print(f"     * Procesando ventana m={w}s...")
+            print(f"     * Processing window m={w}s...")
             
         profile = mp.compute(data_values, windows=w)
         mp_values = profile['mp']
@@ -71,33 +82,33 @@ for idx_col, column_name in enumerate(COLUMNS_TO_ANALYZE, 1):
 
     pmp_matrix = np.array(pmp_matrix)
 
-    # 2.3 Graficar y Guardar
-    print(f"  -> Generando y guardando visualización...")
+    # 2.3 Plot and save
+    print(f"  -> Generating and saving visualization...")
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True, gridspec_kw={'height_ratios': [1, 2.5]})
 
     # Panel Superior (Raw Data)
     ax1.plot(ts_data.index, ts_data.values, color='tab:blue', linewidth=1)
     ax1.set_title(f'Volumen BGP ({column_name}) - 14 May 2017 ', fontweight='bold')
-    ax1.set_ylabel('Valor / s')
+    ax1.set_ylabel('Value / s')
     ax1.grid(True, linestyle='--', alpha=0.5)
 
     # Panel Inferior (PMP)
     cmap = plt.cm.inferno
-    # Aquí dejamos que vmax se ajuste automáticamente al percentil 99 para resaltar mejor cada métrica individual
+    # Let vmax auto-adjust to the 99th percentile to highlight each individual metric better
     vmax_auto = np.nanpercentile(pmp_matrix, 99) if not np.isnan(pmp_matrix).all() else 25
     
     c = ax2.pcolormesh(ts_data.index, list(WINDOWS_TO_TEST), pmp_matrix, cmap=cmap, shading='auto', vmin=0, vmax=vmax_auto)
     ax2.set_title(f'Pan Matrix Profile - {column_name}', fontweight='bold')
-    ax2.set_ylabel('Ventana m (s)')
-    ax2.set_xlabel('Hora Local (UTC)', fontweight='bold')
+    ax2.set_ylabel('Window m (s)')
+    ax2.set_xlabel('Local Time (UTC)', fontweight='bold')
 
     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     plt.xticks(rotation=45)
-    fig.colorbar(c, ax=ax2, label='Distancia Euclidiana')
+    fig.colorbar(c, ax=ax2, label='Euclidean Distance')
 
     plt.tight_layout()
     
-    # Guardar en archivo y cerrar figura para liberar memoria RAM
+    # Save to file and close figure to free RAM
     output_filename = os.path.join(OUTPUT_DIR, f"pmp_14may_{column_name}.png")
     plt.savefig(output_filename, dpi=150)
     plt.close(fig) 
@@ -105,6 +116,6 @@ for idx_col, column_name in enumerate(COLUMNS_TO_ANALYZE, 1):
     print(f"  -> ✓ Guardado como: {output_filename}")
 
 print("\n" + "="*60)
-print("¡PROCESO MULTICOLUMNA COMPLETADO!")
-print(f"Todas las gráficas están en la carpeta: {OUTPUT_DIR}")
+print("MULTI-COLUMN PROCESS COMPLETED!")
+print(f"All plots saved to: {OUTPUT_DIR}")
 print("="*60)

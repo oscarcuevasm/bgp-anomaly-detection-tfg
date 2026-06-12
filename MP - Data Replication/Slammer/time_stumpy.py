@@ -1,51 +1,62 @@
+# ==============================================================================
+# Copyright (c) UNIVERSIDAD AUTÓNOMA DE MADRID
+# Francisco Tomás y Valiente, no 1
+# Madrid, 28049
+# Spain
+#
+# Óscar Cuevas Martínez
+# Evaluating the Performance of BGP Different Anomaly Detection Methods
+# All Rights Reserved
+# ==============================================================================
+
 import pandas as pd
 import stumpy
 import numpy as np
 import time
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURATION ---
 FILE_NAME = "Slammer.csv"
 WINDOW_SIZE = 868
 FEATURE_INDEX = 4
 
 print(f"--- BENCHMARK STUMPY: Slammer (m={WINDOW_SIZE}) ---")
 
-# 1. CARGA DE DATOS (No medimos esto)
-print(f"Cargando datos...")
+# 1. LOAD DATA (not timed)
+print(f"Loading data...")
 try:
     df = pd.read_csv(FILE_NAME, header=None)
     time_series = df.iloc[:, FEATURE_INDEX].astype(float)
-    # Convertir a array numpy explícito para evitar overhead de pandas durante el cálculo
+    # Explicit numpy array conversion to avoid pandas overhead during computation
     time_series_values = time_series.values.copy() 
 except Exception as e:
-    print(f"Error cargando archivo: {e}")
+    print(f"Error loading file: {e}")
     exit()
 
-# 2. CALENTAMIENTO (WARM-UP)
-# Numba necesita compilar la función la primera vez que se ejecuta.
-# Ejecutamos una versión muy pequeña para "calentar" el compilador JIT
-# y que no afecte a la medición real.
-print("Calentando compilador JIT (Numba)...")
+# 2. WARM-UP
+# Numba needs to compile the function on the first call.
+# We run a small dummy execution to warm up the JIT compiler
+# so it does not affect the real measurement.
+print("Warming up JIT compiler (Numba)...")
 stumpy.stump(time_series_values[:100], m=10) 
 
-# 3. MEDICIÓN DEL TIEMPO REAL
-print(f"Ejecutando stumpy.stump en toda la serie...")
+# 3. REAL-TIME MEASUREMENT
+print(f"Running stumpy.stump on the entire series...")
 
 start_time = time.time()
-# --- INICIO CRONÓMETRO ---
+# --- START TIMER ---
 
 mp_result = stumpy.stump(time_series_values, m=WINDOW_SIZE)
 
-# --- FIN CRONÓMETRO ---
+# --- END TIMER ---
 end_time = time.time()
 
 duration = end_time - start_time
-print(f"\nResultados del Benchmark:")
+print(f"\nBenchmark Results:")
 print(f"-------------------------")
-print(f"Tiempo de ejecución: {duration:.4f} segundos")
+print(f"Execution time: {duration:.4f} seconds")
 print(f"-------------------------")
 
-# Verificación rápida (sanity check)
+# Quick sanity check (sanity check)
 mp_vector = mp_result[:, 0]
 k1_idx = np.argsort(mp_vector)[-1]
-print(f"Verificación: Pico más alto encontrado en índice {k1_idx}")
+print(f"Sanity check: Highest peak found at index {k1_idx}")

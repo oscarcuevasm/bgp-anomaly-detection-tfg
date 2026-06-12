@@ -1,3 +1,14 @@
+# ==============================================================================
+# Copyright (c) UNIVERSIDAD AUTÓNOMA DE MADRID
+# Francisco Tomás y Valiente, no 1
+# Madrid, 28049
+# Spain
+#
+# Óscar Cuevas Martínez
+# Evaluating the Performance of BGP Different Anomaly Detection Methods
+# All Rights Reserved
+# ==============================================================================
+
 import pandas as pd
 import numpy as np
 import time

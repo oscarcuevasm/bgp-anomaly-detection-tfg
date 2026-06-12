@@ -1,4 +1,14 @@
-#!/usr/bin/env python3
+# ==============================================================================
+# Copyright (c) UNIVERSIDAD AUTÓNOMA DE MADRID
+# Francisco Tomás y Valiente, no 1
+# Madrid, 28049
+# Spain
+#
+# Óscar Cuevas Martínez
+# Evaluating the Performance of BGP Different Anomaly Detection Methods
+# All Rights Reserved
+# ==============================================================================
+
 
 
 import os
@@ -10,13 +20,13 @@ import re
 from urllib.request import urlopen
 from pathlib import Path
 
-# --- CONFIGURACIÓN DE RUTAS ---
+# --- PATH CONFIGURATION ---
 RIPE_DIR = "./Nimda_RRC04_Raw"
 OUTPUT_DIR = os.path.join(RIPE_DIR, "mrt_files")
 TEMP_DIR = os.path.join(RIPE_DIR, "temp_mrt")
 
-# --- FECHAS EXACTAS A BUSCAR (Día completo) ---
-# (Fecha_String, Archivo_Salida)
+# --- EXACT DATES TO RETRIEVE (full day) ---
+# (Date_String, Output_File)
 TARGETS = [
     ("20010913", os.path.join(RIPE_DIR, "nimda_baseline_13sept_raw.csv")),
     ("20010920", os.path.join(RIPE_DIR, "nimda_anomaly_20sept_raw.csv"))
@@ -32,22 +42,22 @@ def create_directories():
 
 def get_available_files_from_ripe(date_str):
     """
-    Se conecta al directorio de RIPE y extrae los nombres reales de los archivos
-    para una fecha específica, evitando tener que adivinar los minutos.
+    Connects to the RIPE directory listing and retrieves the real filenames
+    for a specific date, avoiding the need to guess the minute intervals.
     """
     year_month = f"{date_str[:4]}.{date_str[4:6]}"
     url = f"https://data.ris.ripe.net/rrc04/{year_month}/"
-    print(f" -> Escaneando directorio web: {url}")
+    print(f" -> Scanning web directory: {url}")
     
     try:
         html = urlopen(url).read().decode('utf-8')
-        # Buscamos archivos que sigan el patrón: updates.YYYYMMDD.HHMM.gz
+        # Search for files matching the pattern: updates.YYYYMMDD.HHMM.gz
         pattern = rf'href="(updates\.{date_str}\.\d{{4}}\.gz)"'
         files = re.findall(pattern, html)
-        # Eliminamos duplicados y ordenamos cronológicamente
+        # Remove duplicates and sort chronologically
         return sorted(list(set(files)))
     except Exception as e:
-        print(f"Error accediendo a RIPE: {e}")
+        print(f"Error accessing RIPE: {e}")
         return []
 
 def download_file(url, local_path):
@@ -69,7 +79,7 @@ def decompress_gz(gz_file, output_file):
         print(f"✗ Error al descomprimir {gz_file}: {e}")
         return False
 
-# --- LÓGICA DE EXTRACCIÓN BGP ---
+# --- BGP EXTRACTION LOGIC ---
 def parse_bgpdump_line(line):
     line = line.strip()
     if not line: return None
@@ -81,7 +91,7 @@ def parse_bgpdump_line(line):
         if msg_type != 'BGP4MP': return None
 
         timestamp = int(parts[1])
-        # Manejo de la hora de forma robusta
+        # Robust timestamp handling
         from datetime import datetime
         dt = datetime.utcfromtimestamp(timestamp)
         date_time = dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -141,19 +151,19 @@ def collect_and_process_updates():
         print(f"PROCESANDO DÍA: {date_str} -> Guardando en {os.path.basename(csv_output)}")
         print("=" * 70)
 
-        # 1. Obtenemos la lista real de archivos del servidor
+        # 1. Retrieve the real list of files from the server
         filenames = get_available_files_from_ripe(date_str)
         if not filenames:
-            print(f"No se encontraron archivos para la fecha {date_str}.")
+            print(f"No files found for date {date_str}.")
             continue
             
-        print(f" -> Encontrados {len(filenames)} archivos válidos en el servidor.")
+        print(f" -> Found {len(filenames)} valid files on the server.")
 
-        # 2. Descargamos y procesamos
+        # 2. Download and process files
         year_month = f"{date_str[:4]}.{date_str[4:6]}"
         base_url = f"https://data.ris.ripe.net/rrc04/{year_month}"
         
-        # Escribimos las cabeceras
+        # Write CSV headers
         with open(csv_output, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames, restval='')
             writer.writeheader()
@@ -166,13 +176,13 @@ def collect_and_process_updates():
             url = f"{base_url}/{filename}"
             local_path = os.path.join(OUTPUT_DIR, filename)
 
-            # Descargar
+            # Download file
             if not os.path.exists(local_path):
-                print(f"[{i}/{len(filenames)}] Descargando {filename}...")
+                print(f"[{i}/{len(filenames)}] Downloading {filename}...")
                 if not download_file(url, local_path):
                     continue
             else:
-                print(f"[{i}/{len(filenames)}] Procesando {filename} (Ya descargado)...", end=" ")
+                print(f"[{i}/{len(filenames)}] Processing {filename} (already downloaded)...", end=" ")
 
             mrt_file = os.path.join(TEMP_DIR, filename.replace('.gz', ''))
             
@@ -204,8 +214,8 @@ def collect_and_process_updates():
             except:
                 pass
 
-        print(f"\nResumen para {os.path.basename(csv_output)}:")
-        print(f"✓ Total paquetes: {total_records:,} (A: {total_announcements:,} | W: {total_withdrawals:,})")
+        print(f"\nSummary for {os.path.basename(csv_output)}:")
+        print(f"✓ Total packets: {total_records:,} (A: {total_announcements:,} | W: {total_withdrawals:,})")
 
     try:
         shutil.rmtree(TEMP_DIR)

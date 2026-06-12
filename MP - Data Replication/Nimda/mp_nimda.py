@@ -1,37 +1,48 @@
+# ==============================================================================
+# Copyright (c) UNIVERSIDAD AUTÓNOMA DE MADRID
+# Francisco Tomás y Valiente, no 1
+# Madrid, 28049
+# Spain
+#
+# Óscar Cuevas Martínez
+# Evaluating the Performance of BGP Different Anomaly Detection Methods
+# All Rights Reserved
+# ==============================================================================
+
 import pandas as pd
 import matrixprofile as mp 
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- 0. CONFIGURACIÓN GLOBAL ---
+# --- 0. GLOBAL CONFIGURATION ---
 FILE_NAME = "Nimda.csv"
-FEATURE_INDEX = 6 # Columna 5 (índice 4) = "Number of announcements"
-np.set_printoptions(suppress=True, precision=2) # Para imprimir los MP values
+FEATURE_INDEX = 6 # Column 7 (index 6) = feature column used for this dataset
+np.set_printoptions(suppress=True, precision=2) # Suppress scientific notation when printing MP values
 
-print(f"--- Ejecutando Replicación Dual: Incidente Nimda ---")
-print(f"Cargando datos de {FILE_NAME}...")
+print(f"--- Running Dual Replication: Nimda Incident ---")
+print(f"Loading data from {FILE_NAME}...")
 
-# --- 1. CARGA DE DATOS (Una sola vez) ---
+# --- 1. DATA LOADING (done once) ---
 try:
     df = pd.read_csv(FILE_NAME, header=None)
     time_series = df.iloc[:, FEATURE_INDEX].astype(float) 
     time_series_values = time_series.values
     N = len(time_series)
-    print(f"Longitud de la serie temporal (N): {N} minutos.")
+    print(f"Time series length (N): {N} minutes.")
 except Exception as e:
-    print(f"ERROR: No se pudo cargar {FILE_NAME}. Error: {e}")
+    print(f"ERROR: Could not load {FILE_NAME}. Error: {e}")
     exit()
 
-# --- 2. ANÁLISIS 1: m=1300 (Figura 5) ---
-print("\n--- ANÁLISIS 1 (m=1300) ---")
+# --- 2. ANALYSIS 1: m=1300 (Figura 5) ---
+print("\n--- ANALYSIS 1 (m=1300) ---")
 WINDOW_SIZE_1 = 1300
 K_DISCORDS_1 = 2
 
-print(f"Calculando Matrix Profile (MP) con m = {WINDOW_SIZE_1}...")
+print(f"Computing Matrix Profile (MP) with m = {WINDOW_SIZE_1}...")
 profile_1 = mp.compute(time_series_values, WINDOW_SIZE_1)
 mp_vector_1 = profile_1['mp']
 
-print(f"Descubriendo las top-{K_DISCORDS_1} discordias (con Zona de Exclusión Manual)...")
+print(f"Discovering top-{K_DISCORDS_1} discords (with manual exclusion zone)...")
 mp_vector_copy_1 = np.copy(mp_vector_1)
 discords_indices_1 = []
 
@@ -42,29 +53,29 @@ for k in range(K_DISCORDS_1):
     end_exclusion = min(len(mp_vector_copy_1), k_index + WINDOW_SIZE_1)
     mp_vector_copy_1[start_exclusion:end_exclusion] = np.NINF 
 
-# Ordenar por magnitud de MP
+# Sort by MP magnitude
 mp_values_1 = mp_vector_1[discords_indices_1]
 sort_by_mp_1 = np.argsort(mp_values_1)[::-1]
 discords_indices_1_sorted = [discords_indices_1[i] for i in sort_by_mp_1]
 
-print("\n--- RESULTADOS (m=1300) ---")
+print("\n--- RESULTS (m=1300) ---")
 k1_index = discords_indices_1_sorted[0]
 k2_index = discords_indices_1_sorted[1]
-print(f"k1 (Pico más alto): Inicio en el minuto {k1_index} (Valor MP: {mp_vector_1[k1_index]:.2f})")
-print(f"k2 (Pico secundario): Inicio en el minuto {k2_index} (Valor MP: {mp_vector_1[k2_index]:.2f})")
-print("Validación: Coincide con Fig. 5 (Picos en ~4371 y ~1057).")
+print(f"k1 (Highest peak): Start at minute {k1_index} (MP value: {mp_vector_1[k1_index]:.2f})")
+print(f"k2 (Secondary peak): Start at minute {k2_index} (MP value: {mp_vector_1[k2_index]:.2f})")
+print("Validation: Matches Fig. 5 (Peaks at ~4371 and ~1057).")
 
 
-# --- 3. ANÁLISIS 2: m=144 (Figura 4) ---
-print("\n--- ANÁLISIS 2 (m=144) ---")
+# --- 3. ANALYSIS 2: m=144 (Figura 4) ---
+print("\n--- ANALYSIS 2 (m=144) ---")
 WINDOW_SIZE_2 = 144
-K_DISCORDS_2 = 15 # k=15 para replicar las múltiples alarmas
+K_DISCORDS_2 = 15 # k=15 to replicate multiple alarms
 
-print(f"Calculando Matrix Profile (MP) con m = {WINDOW_SIZE_2}...")
+print(f"Computing Matrix Profile (MP) with m = {WINDOW_SIZE_2}...")
 profile_2 = mp.compute(time_series_values, WINDOW_SIZE_2)
 mp_vector_2 = profile_2['mp']
 
-print(f"Descubriendo las top-{K_DISCORDS_2} discordias (con Zona de Exclusión Manual)...")
+print(f"Discovering top-{K_DISCORDS_2} discords (with manual exclusion zone)...")
 mp_vector_copy_2 = np.copy(mp_vector_2)
 discords_indices_2 = []
 
@@ -76,16 +87,16 @@ for k in range(K_DISCORDS_2):
     mp_vector_copy_2[start_exclusion:end_exclusion] = np.NINF 
 
 discords_indices_2.sort()
-print(f"\n--- RESULTADOS (m=144) ---")
-print(f"Se encontraron {len(discords_indices_2)} picos (alarmas).")
-print("Validación: Compara visualmente la Gráfica 2 con la Figura 4 del PDF.")
+print(f"\n--- RESULTS (m=144) ---")
+print(f"Found {len(discords_indices_2)} peaks (alarms).")
+print("Validation: Compare Plot 2 visually with Figure 4 from the paper.")
 
 
-# --- 4. VISUALIZACIÓN ---
+# --- 4. VISUALIZATION ---
 
-# Gráfica 1 (m=1300)
+# Plot 1 (m=1300)
 plt.figure(1, figsize=(18, 10))
-plt.suptitle(f'Nimda: Análisis m={WINDOW_SIZE_1} (Comparación Fig. 5)', fontsize=16)
+plt.suptitle(f'Nimda: Analysis m={WINDOW_SIZE_1} (Comparison Fig. 5)', fontsize=16)
 
 plt.subplot(2, 1, 1)
 plt.plot(time_series, label='BGP Volume (Announcements)', color='blue', alpha=0.6)
@@ -94,8 +105,8 @@ for i, index in enumerate(discords_indices_1_sorted):
     start = index
     end = start + WINDOW_SIZE_1
     plt.plot(np.arange(start, end), time_series.iloc[start:end], c=colors[i], 
-             label=f'k{i+1} Discord (Inicio: {index} min)')
-plt.title(f'Serie Temporal BGP')
+             label=f'k{i+1} Discord (Start: {index} min)')
+plt.title(f'BGP Time Series')
 plt.ylabel('BGP Volume')
 plt.legend()
 plt.grid(True, linestyle='--')
@@ -104,34 +115,34 @@ plt.subplot(2, 1, 2)
 plt.plot(np.arange(len(mp_vector_1)), mp_vector_1, label='Matrix Profile', color='green')
 for i, index in enumerate(discords_indices_1_sorted):
     plt.plot(index, mp_vector_1[index], marker='^', markersize=10, color=colors[i], markeredgecolor='black')
-plt.title(f'Vector Matrix Profile (MP)')
-plt.xlabel(f'Índice de Tiempo (minutos)')
-plt.ylabel('Distancia Euclidiana Mínima')
+plt.title(f'Matrix Profile Vector (MP)')
+plt.xlabel(f'Time Index (minutes)')
+plt.ylabel('Minimum Euclidean Distance')
 plt.grid(True, linestyle='--')
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 
-# Gráfica 2 (m=144)
+# Plot 2 (m=144)
 plt.figure(2, figsize=(18, 10))
-plt.suptitle(f'Nimda: Análisis m={WINDOW_SIZE_2} (Comparación Fig. 4)', fontsize=16)
+plt.suptitle(f'Nimda: Analysis m={WINDOW_SIZE_2} (Comparison Fig. 4)', fontsize=16)
 
-plt.subplot(2, 1, 1) # Usaremos solo 2 subplots (Datos y MP)
-plt.plot(time_series, label='Datos BGP (Volumen)', color='C0')
-plt.title(f'Serie Temporal (Datos)')
+plt.subplot(2, 1, 1)
+plt.plot(time_series, label='BGP Data (Volume)', color='C0')
+plt.title(f'Time Series (Data)')
 plt.ylabel('BGP Volume')
 plt.grid(True, linestyle='--')
 
 plt.subplot(2, 1, 2)
 plt.plot(np.arange(len(mp_vector_2)), mp_vector_2, label='Matrix Profile (MP)', color='C0')
-# Marcar TODAS las discordias (k=15) con estrellas rojas
+# Mark ALL discords (k=15) with red stars
 for index in discords_indices_2:
-    plt.plot(index, mp_vector_2[index], marker='*', markersize=10, color='red', linestyle='None', label='Discord (Alarma)')
-plt.title(f'Vector Matrix Profile (MP)')
-plt.xlabel(f'Índice de Tiempo (minutos)')
+    plt.plot(index, mp_vector_2[index], marker='*', markersize=10, color='red', linestyle='None', label='Discord (Alarm)')
+plt.title(f'Matrix Profile Vector (MP)')
+plt.xlabel(f'Time Index (minutes)')
 plt.ylabel('Matrix Profile')
 plt.grid(True, linestyle='--')
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 
-print("\nMostrando gráficas...")
+print("\nDisplaying plots...")
 plt.show()

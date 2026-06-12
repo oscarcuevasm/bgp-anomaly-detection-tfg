@@ -1,3 +1,14 @@
+# ==============================================================================
+# Copyright (c) UNIVERSIDAD AUTÓNOMA DE MADRID
+# Francisco Tomás y Valiente, no 1
+# Madrid, 28049
+# Spain
+#
+# Óscar Cuevas Martínez
+# Evaluating the Performance of BGP Different Anomaly Detection Methods
+# All Rights Reserved
+# ==============================================================================
+
 
 
 import os
@@ -9,14 +20,14 @@ from datetime import datetime, timedelta
 from urllib.request import urlopen
 from pathlib import Path
 
-# --- CONFIGURACIÓN DE RUTAS ---
+# --- PATH CONFIGURATION ---
 BASE_URL = "https://data.ris.ripe.net/rrc04/2017.05"
 RIPE_DIR = "./Wannacrypt_RRC04_Raw"
 OUTPUT_DIR = os.path.join(RIPE_DIR, "mrt_files")
 TEMP_DIR = os.path.join(RIPE_DIR, "temp_mrt")
 
-# --- RANGOS DE TIEMPO Y NOMBRES DE ARCHIVO DE SALIDA ---
-# (Inicio, Fin, Archivo de Salida)
+# --- TIME RANGES AND OUTPUT FILE NAMES ---
+# (Start, End, Output_File)
 PERIODS = [
     ("20170513.0000", "20170513.2355", os.path.join(RIPE_DIR, "wannacrypt_13may_raw.csv")),
     ("20170506.0000", "20170506.2355", os.path.join(RIPE_DIR, "wannacrypt_baseline_6may_raw.csv"))
@@ -49,7 +60,7 @@ def decompress_gz(gz_file, output_file):
         print(f"✗ Error decompressing {gz_file}: {e}")
         return False
 
-# --- LÓGICA DE EXTRACCIÓN ---
+# --- BGP EXTRACTION LOGIC ---
 def parse_bgpdump_line(line):
     line = line.strip()
     if not line: return None
@@ -119,7 +130,7 @@ def collect_and_process_updates():
         print(f"PROCESANDO PERIODO: {start_str[:8]} -> Guardando en {os.path.basename(csv_output)}")
         print("=" * 70)
 
-        # 1. Identificar archivos a descargar
+        # 1. Identify files to download
         files_to_download = []
         start_time = datetime.strptime(start_str, "%Y%m%d.%H%M")
         end_time = datetime.strptime(end_str, "%Y%m%d.%H%M")
@@ -130,7 +141,7 @@ def collect_and_process_updates():
             files_to_download.append(filename)
             current_time += timedelta(minutes=5)
 
-        # 2. Descargar archivos
+        # 2. Download files
         downloaded_files = []
         for i, filename in enumerate(files_to_download, 1):
             url = f"{BASE_URL}/{filename}"
@@ -140,13 +151,13 @@ def collect_and_process_updates():
                 downloaded_files.append(local_path)
                 continue
 
-            print(f"[{i}/{len(files_to_download)}] Descargando {filename}...")
+            print(f"[{i}/{len(files_to_download)}] Downloading {filename}...")
             if download_file(url, local_path):
                 downloaded_files.append(local_path)
             else:
-                print(f"  -> {filename} no encontrado.")
+                print(f"  -> {filename} not found.")
 
-        # 3. Extraer e insertar en su respectivo CSV
+        # 3. Extract and write to the corresponding CSV
         with open(csv_output, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames, restval='')
             writer.writeheader()
@@ -182,8 +193,8 @@ def collect_and_process_updates():
             except:
                 pass
 
-        print(f"\nResumen para {os.path.basename(csv_output)}:")
-        print(f"✓ Total paquetes: {total_records:,} (A: {total_announcements:,} | W: {total_withdrawals:,})")
+        print(f"\nSummary for {os.path.basename(csv_output)}:")
+        print(f"✓ Total packets: {total_records:,} (A: {total_announcements:,} | W: {total_withdrawals:,})")
 
     try:
         shutil.rmtree(TEMP_DIR)

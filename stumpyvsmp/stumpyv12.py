@@ -1,3 +1,14 @@
+# ==============================================================================
+# Copyright (c) UNIVERSIDAD AUTÓNOMA DE MADRID
+# Francisco Tomás y Valiente, no 1
+# Madrid, 28049
+# Spain
+#
+# Óscar Cuevas Martínez
+# Evaluating the Performance of BGP Different Anomaly Detection Methods
+# All Rights Reserved
+# ==============================================================================
+
 import pandas as pd
 import numpy as np
 import time
@@ -14,12 +25,12 @@ print(f" Python Version: {sys.version.split()[0]}")
 print(f" Dataset: {FILE_NAME} | Window Size (m): {WINDOW_SIZE}")
 print("==================================================\n")
 
-# 1. CARGAR DATOS
+# 1. LOAD DATA
 print("Loading data...")
 try:
     df = pd.read_csv(FILE_NAME, header=None)
     time_series = df.iloc[:, FEATURE_INDEX].astype(float)
-    # Conversion explicita a numpy array para optimizar rendimiento
+    # Explicit numpy array conversion to optimise performance
     time_series_values = time_series.values.copy()
     print("Data loaded successfully.\n")
 except Exception as e:
@@ -31,7 +42,7 @@ try:
     import stumpy
     print("--- STUMPY LIBRARY ---")
     print("Warming up JIT compiler (Numba)...")
-    # Ejecucion pequena para compilar Numba JIT sin afectar la medicion real
+    # Small execution to warm up the Numba JIT compiler without affecting real measurement
     _ = stumpy.stump(time_series_values[:100], m=10)
     
     print("Executing stumpy.stump on the entire series...")
@@ -42,7 +53,7 @@ try:
     duration_st = end_time_st - start_time_st
     mp_vector_st = mp_result_st[:, 0]
     
-    # Encontrar el indice del valor maximo (discord)
+    # Find the index of the maximum value (discord)
     k1_idx_st = np.argsort(mp_vector_st)[-1]
     
     print(f"Execution time: {duration_st:.4f} seconds")

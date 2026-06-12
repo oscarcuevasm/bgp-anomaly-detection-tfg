@@ -1,19 +1,29 @@
-#!/usr/bin/env python3
+# ==============================================================================
+# Copyright (c) UNIVERSIDAD AUTÓNOMA DE MADRID
+# Francisco Tomás y Valiente, no 1
+# Madrid, 28049
+# Spain
+#
+# Óscar Cuevas Martínez
+# Evaluating the Performance of BGP Different Anomaly Detection Methods
+# All Rights Reserved
+# ==============================================================================
+
 import pandas as pd
 import numpy as np
 import datetime
 from collections import defaultdict, Counter
 import os
 
-# --- CONFIGURACIÓN DE ARCHIVOS PARA EL APAGÓN DE MOSCÚ ---
-# Apunta al archivo RAW gigante que generaste en el paso anterior
+# --- FILE CONFIGURATION ---
+# Points to the large raw file generated in the previous step
 INPUT_FILE = "./Nimda_RRC04_Raw/nimda_baseline_12sept_raw.csv"
 OUTPUT_FILE = "./Nimda_RRC04_Raw/nimda_baseline_12sept_features_1s.csv"
-WINDOW_SIZE = '1s'  # Agrupación de 1 segundo
+WINDOW_SIZE = '1s'  # 1-second aggregation window
 LABEL_STRATEGY = 'majority'  
 
 # ==============================================================================
-# LÓGICA ORIGINAL DE LA PROFESORA (INTACTA)
+# ORIGINAL FEATURE EXTRACTION LOGIC (UNCHANGED)
 # ==============================================================================
 def calculate_edit_distance(as_path1, as_path2):
     """ Calculate edit distance between two AS paths """
@@ -221,18 +231,18 @@ def extract_features(df_window):
 # ==============================================================================
 def process_bgp_data():
     if not os.path.exists(INPUT_FILE):
-        print(f"ERROR: No se encuentra el archivo RAW en {INPUT_FILE}")
+        print(f"ERROR: RAW file not found at {INPUT_FILE}")
         return None
 
-    print(f"Leyendo archivo RAW: {INPUT_FILE}")
-    print("Esto puede tardar un poco dependiendo del tamaño del archivo...")
+    print(f"Reading RAW file: {INPUT_FILE}")
+    print("This may take a while depending on file size...")
     
-    # Leer el CSV asegurando que los tipos de datos no den problemas
+    # Read CSV ensuring data types do not cause issues
     df = pd.read_csv(INPUT_FILE, dtype=str)
     
-    # --- BLOQUE DE TRADUCCIÓN ---
-    # Adaptamos los nombres de columnas de nuestro extractor a lo que espera la profesora
-    print("Adaptando formato de datos...")
+    # --- COLUMN NAME MAPPING ---
+    # Rename columns from our extractor format to the expected feature extraction format
+    print("Adapting data format...")
     df = df.rename(columns={
         'Time': 'Timestamp',
         'Entry_Type': 'Subtype',
@@ -240,9 +250,9 @@ def process_bgp_data():
         'Community': 'Communities'
     })
     
-    # Traducimos los tipos de mensajes A -> ANNOUNCE y W -> WITHDRAW
+    # Map message types: A -> ANNOUNCE, W -> WITHDRAW
     df['Subtype'] = df['Subtype'].map({'A': 'ANNOUNCE', 'W': 'WITHDRAW'}).fillna(df['Subtype'])
-    # -----------------------------
+
 
     # Convertir Timestamp a formato datetime real para Pandas
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
@@ -250,7 +260,7 @@ def process_bgp_data():
     
     start_time = df['Timestamp'].min()
     end_time = df['Timestamp'].max()
-    print(f"Rango de tiempo: {start_time} a {end_time}")
+    print(f"Time range: {start_time} to {end_time}")
     
     df.set_index('Timestamp', inplace=True)
     all_features = []
@@ -259,7 +269,7 @@ def process_bgp_data():
     window_count = 0
     total_windows = len(grouped)
     
-    print(f"Iniciando extracción de características en ventanas de {WINDOW_SIZE}...")
+    print(f"Starting feature extraction in {WINDOW_SIZE} windows...")
     
     for window_start, window_df in grouped:
         if not window_df.empty:
@@ -274,9 +284,9 @@ def process_bgp_data():
                 window_count += 1
                 
                 if window_count % 100 == 0:
-                    print(f"Procesadas {window_count}/{total_windows} ventanas (con actividad)...")
+                    print(f"Processed {window_count}/{total_windows} windows (with activity)...")
     
-    print(f"Total de ventanas procesadas exitosamente: {window_count}")
+    print(f"Total windows processed successfully: {window_count}")
     
     if all_features:
         features_df = pd.DataFrame(all_features)
@@ -295,12 +305,12 @@ def process_bgp_data():
             for feature in missing_features:
                 features_df[feature] = 0
         
-        # Guardar resultado final
+        # Save final result
         features_df.to_csv(OUTPUT_FILE, index=False)
-        print(f"¡ÉXITO! Features guardadas en: {OUTPUT_FILE}")
+        print(f"SUCCESS! Features saved to: {OUTPUT_FILE}")
         return features_df
     else:
-        print("No se extrajo ninguna característica. Verifica los datos.")
+        print("No features extracted. Please check the input data.")
         return None
 
 if __name__ == "__main__":
